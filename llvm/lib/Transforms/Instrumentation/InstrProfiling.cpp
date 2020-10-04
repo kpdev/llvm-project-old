@@ -436,6 +436,9 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
       } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(Instr)) {
         lowerValueProfileInst(Ind);
         MadeChange = true;
+      } else if (auto* CSIntr = dyn_cast<InstrProfCallsiteCounters>(Instr)) {
+        CSIntr->eraseFromParent();
+        MadeChange = true;
       }
     }
   }

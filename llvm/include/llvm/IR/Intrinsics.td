@@ -504,6 +504,15 @@ def int_instrprof_value_profile : Intrinsic<[],
                                              llvm_i32_ty],
                                             []>;
 
+// A call to provide a pointer to callsite counters
+// 1st parameter – callee hash
+// 2nd parameter – callsite id
+def int_instrprof_callsite_counters : 
+   Intrinsic<[],                         // Ret type(s)
+             [llvm_i64_ty, llvm_i32_ty], // Parameters
+             []>;                        // Properties
+
+
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 

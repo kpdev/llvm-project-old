@@ -82,6 +82,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -838,6 +839,21 @@ static void instrumentOneFunc(
     Function &F, Module *M, BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFI,
     std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
     bool IsCS) {
+  // Instrument callsites
+  for (auto& I : instructions(&F)) {
+    if (isa<CallBase>(I)) {
+      IRBuilder<> Builder(&I);
+      const int32_t CallsiteID = 0;//getCallsiteId(CalleeHash, CallInstr);
+      const uint64_t CalleeHash = dyn_cast<CallBase>(&I)->getCalledFunction()->getGUID();
+      // If (CallsiteID > 0) {
+        Builder.CreateCall(
+                Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite_counters),
+                { Builder.getInt64(CalleeHash),
+                  Builder.getInt32(CallsiteID) });
+      // }
+    }
+  }
+
   // Split indirectbr critical edges here before computing the MST rather than
   // later in getInstrBB() to avoid invalidating it.
   SplitIndirectBrCriticalEdges(F, BPI, BFI);

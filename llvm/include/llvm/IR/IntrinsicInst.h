@@ -814,6 +814,26 @@ namespace llvm {
     Value *getSrc() const { return const_cast<Value*>(getArgOperand(1)); }
   };
 
+  /// This represents the llvm.instrprof_callsite_counters intrinsic.
+  class InstrProfCallsiteCounters : public IntrinsicInst
+  {
+  public:
+    static bool classof(const IntrinsicInst *I) {
+      return I->getIntrinsicID() == Intrinsic::instrprof_callsite_counters;
+    }
+    static bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+
+    ConstantInt *getCalleeHash() const {
+      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(0)));
+    }
+
+    ConstantInt *getCallsiteID() const {
+      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
+    }
+  };
+
   /// This represents the llvm.instrprof_increment intrinsic.
   class InstrProfIncrementInst : public IntrinsicInst {
   public:
