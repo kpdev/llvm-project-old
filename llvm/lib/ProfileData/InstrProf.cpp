@@ -306,6 +306,10 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
   return VarName;
 }
 
+std::string getPGOCallsiteIDName(StringRef FuncName) {
+  return std::string("__llvm_prof_") + FuncName.str() + "_csid";
+}
+
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {

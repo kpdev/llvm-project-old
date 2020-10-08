@@ -182,6 +182,10 @@ std::string getPGOFuncName(StringRef RawFuncName,
 std::string getPGOFuncNameVarName(StringRef FuncName,
                                   GlobalValue::LinkageTypes Linkage);
 
+/// Return name of a global variable used to store
+/// a callsite id for given function name \c FuncName
+std::string getPGOCallsiteIDName(StringRef FuncName);
+
 /// Create and return the global variable for function name used in PGO
 /// instrumentation. \c FuncName is the name of the function returned
 /// by \c getPGOFuncName call.

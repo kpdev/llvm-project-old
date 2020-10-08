@@ -436,8 +436,8 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
       } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(Instr)) {
         lowerValueProfileInst(Ind);
         MadeChange = true;
-      } else if (auto* CSIntr = dyn_cast<InstrProfCallsiteCounters>(Instr)) {
-        CSIntr->eraseFromParent();
+      } else if (auto *CSIntr = dyn_cast<InstrProfCallsiteCounters>(Instr)) {
+        lowerCSCounters(CSIntr);
         MadeChange = true;
       }
     }
@@ -667,13 +667,65 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
+static Function* getFuncByGUID(Module &M, uint64_t GUID) {
+  for (Function &F : M) {
+    if (F.getGUID() == GUID) {
+      return &F;
+    }
+  }
+  llvm_unreachable("Function with given GUID is not found");
+  return nullptr;
+}
+
+void InstrProfiling::lowerCSCounters(InstrProfCallsiteCounters *CSIntrinsic) {
+  Module *M = CSIntrinsic->getParent()->getParent()->getParent();
+  const auto GUID = CSIntrinsic->getCalleeHash()->getSExtValue();
+  Function *CalleeF = getFuncByGUID(*M, GUID);
+
+  const std::string CSIDName = getPGOCallsiteIDName(CalleeF->getName());
+  LLVMContext &Ctx = M->getContext();
+  auto *CounterTy = Type::getInt32Ty(Ctx);
+  auto Linkage = GlobalValue::InternalLinkage;
+  auto *CSIDVarPtr = M->getNamedGlobal(CSIDName);
+  if (!CSIDVarPtr) {
+    CSIDVarPtr =
+      new GlobalVariable(*M, CounterTy, false, Linkage,
+        Constant::getNullValue(CounterTy), CSIDName);
+  }
+  IRBuilder<> Builder(CSIntrinsic);
+  Builder.CreateStore(CSIntrinsic->getCallsiteID(), CSIDVarPtr);
+  CSIntrinsic->eraseFromParent();
+}
+
 void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   GlobalVariable *Counters = getOrCreateRegionCounters(Inc);
 
   IRBuilder<> Builder(Inc);
-  uint64_t Index = Inc->getIndex()->getZExtValue();
-  Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(),
-                                                   Counters, 0, Index);
+
+  Function *F = Inc->getParent()->getParent();
+  Module *M = F->getParent();
+  LLVMContext &Ctx = M->getContext();
+  auto *CSIDTy = Type::getInt32Ty(Ctx);
+  Value* CurCSID = ConstantInt::get(CSIDTy, 0);
+  if (F->getName().compare("main") != 0) {
+    const std::string CSIDName = getPGOCallsiteIDName(F->getName());
+    auto Linkage = GlobalValue::InternalLinkage;
+    auto *CSIDVarPtr = M->getNamedGlobal(CSIDName);
+    if (!CSIDVarPtr) {
+      CSIDVarPtr =
+        new GlobalVariable(*M, CSIDTy, false, Linkage,
+          Constant::getNullValue(CSIDTy), CSIDName);
+    }
+    CurCSID = Builder.CreateLoad(CSIDVarPtr, "load_csid");
+  }
+
+  auto *FirstElemIndexForCurCS = Builder.CreateMul(CurCSID, Inc->getNumCounters());
+  auto *CounterIndexForCurCS = Builder.CreateAdd(FirstElemIndexForCurCS, Inc->getIndex());
+  Value *Indexes [] = {
+    ConstantInt::get(Type::getInt32Ty(Ctx), 0),
+    CounterIndexForCurCS
+  };
+  Value *Addr = Builder.CreateInBoundsGEP(Counters->getValueType(), Counters, Indexes);
 
   if (isRuntimeCounterRelocationEnabled()) {
     Type *Int64Ty = Type::getInt64Ty(M->getContext());

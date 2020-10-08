@@ -251,6 +251,11 @@ static cl::opt<bool>
                                    "optimization remarks: -{Rpass|"
                                    "pass-remarks}=pgo-instrumentation"));
 
+// Command line option to enable/disable callsite profiling.
+static cl::opt<bool>
+    PGOInstrCallsite("pgo-instr-callsite", cl::init(true), cl::Hidden,
+                     cl::desc("Enable usage of callsite information for profiling."));
+
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
 extern cl::opt<PGOViewCountsType> PGOViewCounts;
@@ -833,25 +838,62 @@ populateEHOperandBundle(VPCandidateInfo &Cand,
   }
 }
 
+class CallsiteCache {
+public:
+  void init(const Module &M);
+  uint32_t getCallsiteID(const CallBase *CB) const;
+  uint32_t getCallsitesCount(const Function *F) const;
+private:
+  std::unordered_map<const Function*, SmallVector<const CallBase*, 8>> Cache;
+};
+
+void CallsiteCache::init(const Module &M) {
+  if (!Cache.empty()) {
+    // already initialized
+    return;
+  }
+
+  for (const Function &F : M) {
+    for (const Instruction &I : instructions(&F)) {
+      if (const CallBase *CB = dyn_cast_or_null<CallBase>(&I)) {
+        Cache[CB->getCalledFunction()].push_back(CB);
+      }
+    }
+  }
+}
+
+uint32_t CallsiteCache::getCallsiteID(const CallBase *CB) const {
+  const auto Iter = Cache.find(CB->getCalledFunction());
+  if (Iter == Cache.end()) {
+    return 0;
+  }
+
+  const auto& CBs = Iter->second;
+  const auto CBIter = std::find(CBs.begin(), CBs.end(), CB);
+  return (CBIter == CBs.end())
+            ? 0
+            : (1 + std::distance(CBs.begin(), CBIter));
+}
+
+uint32_t CallsiteCache::getCallsitesCount(const Function *F) const {
+  const auto FIter = Cache.find(F);
+  return FIter == Cache.end() ? 0 : FIter->second.size();
+}
+
+static CallsiteCache CSCache;
+
 // Visit all edge and instrument the edges not in MST, and do value profiling.
 // Critical edges will be split.
 static void instrumentOneFunc(
     Function &F, Module *M, BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFI,
     std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
     bool IsCS) {
-  // Instrument callsites
-  for (auto& I : instructions(&F)) {
-    if (isa<CallBase>(I)) {
-      IRBuilder<> Builder(&I);
-      const int32_t CallsiteID = 0;//getCallsiteId(CalleeHash, CallInstr);
-      const uint64_t CalleeHash = dyn_cast<CallBase>(&I)->getCalledFunction()->getGUID();
-      // If (CallsiteID > 0) {
-        Builder.CreateCall(
-                Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite_counters),
-                { Builder.getInt64(CalleeHash),
-                  Builder.getInt32(CallsiteID) });
-      // }
-    }
+  if (PGOInstrCallsite) {
+    assert(!PGOInstrSelect && "Combination of -pgo-instr-select and -pgo-instr-callsite"
+                              " is not suported yet");
+    assert(!PGOInstrMemOP  && "Combination of -pgo-instr-memop and -pgo-instr-callsite"
+                              " is not suported yet");
+    CSCache.init(*M);
   }
 
   // Split indirectbr critical edges here before computing the MST rather than
@@ -862,8 +904,9 @@ static void instrumentOneFunc(
                                                    BFI, IsCS);
   std::vector<BasicBlock *> InstrumentBBs;
   FuncInfo.getInstrumentBBs(InstrumentBBs);
+  const uint32_t CSCount = 1 + CSCache.getCallsitesCount(&F);
   unsigned NumCounters =
-      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+      CSCount * InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
   uint32_t I = 0;
   Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
@@ -878,10 +921,32 @@ static void instrumentOneFunc(
          Builder.getInt32(I++)});
   }
 
+  if (PGOInstrCallsite) {
+    // Instrument callsites
+    for (auto I = inst_begin(&F); I != inst_end(&F); ++I) {
+      if (CallBase *CB = dyn_cast_or_null<CallBase>(&*I)) {
+        IRBuilder<> Builder(CB);
+        const int32_t CallsiteID = CSCache.getCallsiteID(CB);
+        if (CallsiteID > 0) {
+          const uint64_t CalleeHash = CB->getCalledFunction()->getGUID();
+          Function *IntrDecl = Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite_counters);
+          Builder.CreateCall(IntrDecl,
+                  { Builder.getInt64(CalleeHash),
+                    Builder.getInt32(CallsiteID) });
+          auto NextIter = I;
+          Builder.SetInsertPoint(&*(NextIter++));
+          Builder.CreateCall(IntrDecl,
+                  { Builder.getInt64(CalleeHash),
+                    Builder.getInt32(0) });
+        }
+      }
+    }
+  }
+
   // Now instrument select instructions:
   FuncInfo.SIVisitor.instrumentSelects(F, &I, NumCounters, FuncInfo.FuncNameVar,
                                        FuncInfo.FunctionHash);
-  assert(I == NumCounters);
+  assert(I == NumCounters / (1 + CSCache.getCallsitesCount(&F)));
 
   if (DisableValueProfiling)
     return;

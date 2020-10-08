@@ -97,6 +97,9 @@ private:
   /// Replace instrprof_increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
 
+  /// Replace instrprof_callsite-counters with a select of the appropriate counters set.
+  void lowerCSCounters(InstrProfCallsiteCounters *CSIntrinsic);
+
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
 
