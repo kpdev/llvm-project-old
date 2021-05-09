@@ -4196,6 +4196,52 @@ void Parser::ParseStructDeclaration(
   }
 }
 
+bool Parser::TryParsePPExt(Decl *TagDecl, SmallVector<Decl *, 32>& FieldDecls) {
+  if (Tok.isNot(clang::tok::l_square)) {
+    return false;
+  }
+
+  printf("\n[PPMC] Parse extension\n");
+  ConsumeAnyToken();
+  while (Tok.isNot(clang::tok::r_square)) {
+    printf("  Token -> Kind: [%s]", Tok.getName());
+    if (Tok.is(clang::tok::identifier)) {
+      auto Name = Tok.getIdentifierInfo()->getName().str();
+      printf(", Name:[%s]", Name.c_str());
+    }
+    printf("\n");
+    ConsumeAnyToken();
+  }
+  printf("[PPMC] Finish parse extension\n\n");
+  ConsumeAnyToken();
+
+  ParsingDeclSpec DS(*this);
+  auto Policy = Actions.getPrintingPolicy();
+  auto Loc = Tok.getLocation();
+  unsigned int DiagID = 0;
+  const char *PrevSpec = nullptr;
+  bool isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int, Loc, PrevSpec, DiagID, Policy);
+  assert(!isInvalid);
+  ParsingFieldDeclarator DeclaratorInfo(*this, DS);
+  SourceLocation CommaLoc;
+  DeclaratorInfo.D.setCommaLoc(CommaLoc);
+  static unsigned scount = 0;
+  std::string name = std::string("pp_tmp_field_") + std::to_string(scount++);
+  auto ID = PP.getIdentifierInfo(name);
+  DeclaratorInfo.D.SetIdentifier(ID, Loc);
+  DeclaratorInfo.D.SetRangeBegin(Loc);
+  DeclaratorInfo.D.SetRangeEnd(Loc);
+
+  Decl *Field =
+      Actions.ActOnField(getCurScope(), TagDecl,
+                          DeclaratorInfo.D.getDeclSpec().getSourceRange().getBegin(),
+                          DeclaratorInfo.D,
+                          DeclaratorInfo.BitfieldSize);
+  FieldDecls.push_back(Field);
+  DeclaratorInfo.complete(Field);
+  return true;
+}
+
 /// ParseStructUnionBody
 ///       struct-contents:
 ///         struct-declaration-list
@@ -4318,21 +4364,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   T.consumeClose();
 
-  if (Tok.is(clang::tok::l_square)) {
-    printf("\n[PPMC] Parse extension\n");
-    ConsumeAnyToken();
-    while (Tok.isNot(clang::tok::r_square)) {
-      printf("  Token -> Kind: [%s]", Tok.getName());
-      if (Tok.is(clang::tok::identifier)) {
-        auto Name = Tok.getIdentifierInfo()->getName().str();
-        printf(", Name:[%s]", Name.c_str());
-      }
-      printf("\n");
-      ConsumeAnyToken();
-    }
-    printf("[PPMC] Finish parse extension\n\n");
-    ConsumeAnyToken();
-  }
+  bool isPPExtParsed = TryParsePPExt(TagDecl, FieldDecls);
 
   ParsedAttributes attrs(AttrFactory);
   // If attributes exist after struct contents, parse them.
@@ -4342,6 +4374,10 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
+
+  if (isPPExtParsed) {
+    TagDecl->dump();
+  }
 }
 
 /// ParseEnumSpecifier
