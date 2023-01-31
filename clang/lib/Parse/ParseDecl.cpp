@@ -4413,7 +4413,9 @@ void Parser::ParseStructDeclaration(
   }
 }
 
-bool Parser::TryParsePPExt(Decl *TagDecl, SmallVector<Decl *, 32>& FieldDecls) {
+bool Parser::TryParsePPExt(Decl *TagDecl,
+                           SmallVector<Decl *, 32>& FieldDecls,
+                           const ParsedAttributes& Attrs) {
   if (Tok.isNot(clang::tok::l_square)) {
     return false;
   }
@@ -4441,7 +4443,7 @@ bool Parser::TryParsePPExt(Decl *TagDecl, SmallVector<Decl *, 32>& FieldDecls) {
     const char *PrevSpec = nullptr;
     bool isInvalid = DS.SetTypeSpecType(FieldType, Loc, PrevSpec, DiagID, Policy);
     assert(!isInvalid);
-    ParsingFieldDeclarator DeclaratorInfo(*this, DS);
+    ParsingFieldDeclarator DeclaratorInfo(*this, DS, Attrs);
     SourceLocation CommaLoc;
     DeclaratorInfo.D.setCommaLoc(CommaLoc);
     auto ID = PP.getIdentifierInfo(FieldName);
@@ -4589,13 +4591,13 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   T.consumeClose();
 
-  bool isPPExtParsed = TryParsePPExt(TagDecl, FieldDecls);
-
   ParsedAttributes attrs(AttrFactory);
   // If attributes exist after struct contents, parse them.
   MaybeParseGNUAttributes(attrs);
 
   SmallVector<Decl *, 32> FieldDecls(TagDecl->fields());
+
+  bool isPPExtParsed = TryParsePPExt(TagDecl, FieldDecls, attrs);
 
   Actions.ActOnFields(getCurScope(), RecordLoc, TagDecl, FieldDecls,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
