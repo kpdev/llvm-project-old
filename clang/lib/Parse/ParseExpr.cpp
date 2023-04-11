@@ -1859,16 +1859,23 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
   // parsed, see if there are any postfix-expression pieces here.
   SourceLocation Loc;
   auto SavedType = PreferredType;
-
-  auto IsGeneralization = [](Expr* E) {
-    if (!isa<DeclRefExpr>(E))
+  bool IsNextVariantField = false;
+  auto IsGeneralization = [](Expr* E, bool IsNextVariant) {
+    if (!isa<DeclRefExpr>(E) && !isa<ValueStmt>(E))
       return false;
 
-    if (auto X = cast_or_null<DeclRefExpr>(E)) {
-      auto TypeName = X->getType().getCanonicalType().getTypePtr()->
-                          getAsRecordDecl()->getName();
-      return TypeName.startswith("__pp_struct");
+    if (isa<DeclRefExpr>(E)) {
+      if (auto X = cast_or_null<DeclRefExpr>(E)) {
+        auto TypeName = X->getType().getCanonicalType().getTypePtr()->
+                            getAsRecordDecl()->getName();
+        return TypeName.startswith("__pp_struct");
+      }
     }
+
+    if (isa<ValueStmt>(E)) {
+      return IsNextVariant;
+    }
+
     return false;
   };
 
@@ -1879,7 +1886,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
     PreferredType = SavedType;
     switch (Tok.getKind()) {
     case tok::less:
-      if (!LHS.isInvalid() && IsGeneralization(LHS.get())) {
+      if (!LHS.isInvalid() && IsGeneralization(LHS.get(), IsNextVariantField)) {
+        IsNextVariantField = false;
         IsInVarianField = true;
         Tok.startToken();
         Tok.clearFlag(Token::NeedsCleaning);
@@ -1919,6 +1927,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
     case tok::greater:
       if (IsInVarianField) {
         IsInVarianField = false;
+        IsNextVariantField = NextToken().is(tok::less);
         ConsumeToken();
         break;
       }
@@ -2174,7 +2183,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
     case tok::period: {
       {
         Expr* OrigLHS = !LHS.isInvalid() ? LHS.get() : nullptr;
-        if (IsGeneralization(OrigLHS)) {
+        if (IsGeneralization(OrigLHS, IsNextVariantField)) {
+          IsNextVariantField = false;
           // Check PP-EXT
           // auto type = X->getType().getAsString();
           // auto name = X->getNameInfo().getAsString();
