@@ -1726,6 +1726,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           V.VariantTagVariableName, ppMNames);
       }
       ConsumeToken();
+      assert(Tok.is(tok::semi));
+      ConsumeToken();
       assert(Tok.is(tok::greater));
       ConsumeToken();
       assert(Tok.is(tok::semi));
