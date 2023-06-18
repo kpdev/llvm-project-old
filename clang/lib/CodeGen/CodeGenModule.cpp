@@ -53,6 +53,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -1243,6 +1244,20 @@ void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
               shouldMapVisibilityToDLLExport(D)) &&
              !GV->isDeclarationForLinker())
       GV->setDLLStorageClass(llvm::GlobalVariable::DLLExportStorageClass);
+  }
+}
+
+void CodeGenModule::adjustPPLinkage(llvm::Function* F) {
+  StringRef FName = F->getName();
+  if (FName.startswith("__pp_")) {
+    F->setLinkage(llvm::GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+  }
+}
+
+void CodeGenModule::adjustPPLinkage(llvm::GlobalVariable* GV) {
+  StringRef GVName = GV->getName();
+  if (GVName.startswith("__pp_")) {
+    GV->setLinkage(llvm::GlobalValue::LinkageTypes::LinkOnceODRLinkage);
   }
 }
 
@@ -4903,6 +4918,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (CGDebugInfo *DI = getModuleDebugInfo())
     if (getCodeGenOpts().hasReducedDebugInfo())
       DI->EmitGlobalVariable(GV, D);
+
+  adjustPPLinkage(GV);
 }
 
 void CodeGenModule::EmitExternalVarDeclaration(const VarDecl *D) {
@@ -5224,6 +5241,8 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // declarations).
   auto *Fn = cast<llvm::Function>(GV);
   setFunctionLinkage(GD, Fn);
+
+  adjustPPLinkage(Fn);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
   setGVProperties(Fn, GD);
