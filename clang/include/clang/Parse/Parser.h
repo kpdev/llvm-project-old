@@ -252,6 +252,12 @@ class Parser : public CodeCompletionHandler {
   /// Current kind of OpenMP clause
   OpenMPClauseKind OMPClauseKind = llvm::omp::OMPC_unknown;
 
+  /// Part of PP-EXT
+  /// When true, we are in parsing base types of pp multimethod invocation
+  /// (between '<' and '>')
+  /// MultiMethod<...here...>();
+  bool IsInPPMM = false;
+
   /// RAII class that manages the template parameter depth.
   class TemplateParameterDepthRAII {
     unsigned &Depth;
