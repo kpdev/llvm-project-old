@@ -35,8 +35,6 @@
 
 using namespace clang;
 
-static bool IsInPPMultimethod = false;
-
 //===----------------------------------------------------------------------===//
 // C99 6.7: Declarations.
 //===----------------------------------------------------------------------===//
@@ -6261,6 +6259,18 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide) {
   return IsConstructor;
 }
 
+void Parser::FinalizePPArgsParsing()
+{
+  IsInPPMultimethod = false;
+  ConsumeToken();
+  assert(Tok.is(tok::l_paren));
+  if (NextToken().is(tok::r_paren)) {
+    ConsumeAnyToken();
+  } else {
+    Tok.setKind(tok::comma);
+  }
+}
+
 /// ParseTypeQualifierListOpt
 ///          type-qualifier-list: [C99 6.7.5]
 ///            type-qualifier
@@ -6287,14 +6297,7 @@ void Parser::ParseTypeQualifierListOpt(
   SourceLocation EndLoc;
 
   if (Tok.is(tok::greater)) {
-    IsInPPMultimethod = false;
-    ConsumeToken();
-    assert(Tok.is(tok::l_paren));
-    if (NextToken().is(tok::r_paren)) {
-      ConsumeAnyToken();
-    } else {
-      Tok.setKind(tok::comma);
-    }
+    FinalizePPArgsParsing();
   }
 
   while (true) {
@@ -7001,6 +7004,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   if (Tok.is(tok::less)) {
     Tok.setKind(tok::l_paren);
     IsInPPMultimethod = true;
+  }
+  else if (IsInPPMultimethod && Tok.is(tok::greater)) {
+    FinalizePPArgsParsing();
   }
 
   while (true) {
