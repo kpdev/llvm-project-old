@@ -2204,7 +2204,8 @@ private:
   enum class PPFuncMode {
     Ctor,
     Init,
-    Increment
+    Increment,
+    MMDefault
   };
 
   struct PPMangledNames {
@@ -2224,7 +2225,12 @@ private:
 
     void addVariantName(std::string VariantName);
 
-    __attribute__((noinline))
+    std::string MMName;
+    std::string MMArrayName;
+
+    void setMMName(std::string Name);
+
+    LLVM_ATTRIBUTE_NOINLINE
     void dump();
   };
 
@@ -2238,7 +2244,8 @@ private:
   void AddFunc(std::string FuncName,
                PPFuncMode Mode,
                std::string TagNameToInit,
-               PPMangledNames& ppMNames);
+               PPMangledNames& ppMNames,
+               SmallVector<DeclaratorChunk::ParamInfo, 16> *ParamInfo = nullptr);
 
   void FieldGenerator(const char* FieldName,
                       DeclSpec::TST FieldType,
