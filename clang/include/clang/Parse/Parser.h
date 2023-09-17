@@ -2255,7 +2255,10 @@ private:
                       Decl *TestDecl,
                       SmallVector<Decl *, 32>& FieldDecls);
 
-  Sema::DeclGroupPtrTy VarGenerate(std::string TypeVarName);
+  Sema::DeclGroupPtrTy VarGenerate(std::string TypeVarName, bool IsPointer = false);
+  Sema::DeclGroupPtrTy TypedefGenerate(std::string TypeVarName,
+                                       DeclSpec::TST ReturnTypeSpecifier,
+                                       SmallVector<DeclaratorChunk::ParamInfo, 16>& ParamInfo);
 
   //===--------------------------------------------------------------------===//
   // Objective-C Statements
