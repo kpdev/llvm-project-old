@@ -2245,6 +2245,7 @@ private:
                PPFuncMode Mode,
                std::string TagNameToInit,
                PPMangledNames& ppMNames,
+               DeclSpec::TST ReturnType = DeclSpec::TST_void,
                SmallVector<DeclaratorChunk::ParamInfo, 16> *ParamInfo = nullptr);
 
   void FieldGenerator(const char* FieldName,
