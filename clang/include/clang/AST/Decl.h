@@ -2546,6 +2546,8 @@ public:
     setParams(getASTContext(), NewParamInfo);
   }
 
+  std::vector<std::string> getNamesOfGenArgsForPPMM() const;
+
   /// Returns the minimum number of arguments needed to call this function. This
   /// may be fewer than the number of function parameters, if some of the
   /// parameters have default arguments (in C++).
