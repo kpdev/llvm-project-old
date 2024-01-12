@@ -1572,7 +1572,8 @@ private:
 
   // PP-Extension
   void HandlePPExtensionMethods(llvm::Function* F, GlobalDecl GD);
-  llvm::Function* ExtractDefaultPPMMImplementation(llvm::Function* F);
+  llvm::Function* ExtractDefaultPPMMImplementation(llvm::Function* F,
+                                                   const clang::FunctionDecl* FD);
   llvm::BasicBlock*
   InitPPHandlersArray(llvm::BasicBlock* BB,
                       llvm::Value* AllocatedBytes,
