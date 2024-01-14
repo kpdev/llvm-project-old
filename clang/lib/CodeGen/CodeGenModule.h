@@ -1579,6 +1579,9 @@ private:
                       llvm::Value* AllocatedBytes,
                       llvm::Value* HandlersArray,
                       llvm::Value* DefaultHandler);
+  llvm::CallInst* CreateCallPrintf(llvm::BasicBlock* BB,
+                                   StringRef FormatStr,
+                                   llvm::Value* Arg);
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitExternalVarDeclaration(const VarDecl *D);
