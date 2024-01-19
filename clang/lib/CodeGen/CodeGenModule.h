@@ -1572,6 +1572,9 @@ private:
 
   // PP-Extension
   void HandlePPExtensionMethods(llvm::Function* F, GlobalDecl GD);
+  void AddPPSpecialization(
+    llvm::Function* F,
+    const std::vector<FunctionDecl::PPMMParam>& Gens);
   llvm::Function* ExtractDefaultPPMMImplementation(llvm::Function* F,
                                                    const clang::FunctionDecl* FD);
   llvm::BasicBlock*
@@ -1581,7 +1584,8 @@ private:
                       llvm::Value* DefaultHandler);
   llvm::CallInst* CreateCallPrintf(llvm::BasicBlock* BB,
                                    StringRef FormatStr,
-                                   llvm::Value* Arg = nullptr);
+                                   llvm::Value* Arg = nullptr,
+                                   bool InsertInTheBeginning = false);
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitExternalVarDeclaration(const VarDecl *D);
