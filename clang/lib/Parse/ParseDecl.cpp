@@ -7100,13 +7100,20 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   if (Tok.is(tok::less)) {
     Tok.setKind(tok::l_paren);
     IsInPPMultimethod = true;
-    StringRef FuncName = D.getIdentifier()->getName();
+    NumberOfPPSpecilizations = 0;
+    PPMultimethodNameStr = D.getIdentifier()->getName();
+    PPMMDecl = &D;
+  }
+  else if (IsInPPMultimethod && Tok.is(tok::greater)) {
+    auto NumOsSpecStr = std::to_string(NumberOfPPSpecilizations);
+    auto FNameStr = PPMultimethodNameStr.str();
+    PPMultimethodNameStr = "";
+    auto FullNameStr = NumOsSpecStr + "_" + FNameStr;
+    StringRef FuncName = FullNameStr;
     SmallVector<char> TmpOut;
     StringRef Mangled = Twine("__pp_mm_" + FuncName).toStringRef(TmpOut);
     IdentifierInfo* II = &PP.getIdentifierTable().get(Mangled);
-    D.getName().setIdentifier(II, D.getIdentifierLoc());
-  }
-  else if (IsInPPMultimethod && Tok.is(tok::greater)) {
+    PPMMDecl->getName().setIdentifier(II, D.getIdentifierLoc());
     FinalizePPArgsParsing();
   }
 
@@ -7585,12 +7592,17 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   if (IsSpecialization) {
     StringRef FuncName = D.getIdentifier()->getName();
     std::string strMangled = FuncName.str();
+    auto SpecNum =
+      FunctionDecl::getNumOfSpecializationsPPMM(FuncName);
     for(auto& PIn : ParamInfo) {
       strMangled += cast<ParmVarDecl>(
                       PIn.Param)
                         ->getType()
                         .getBaseTypeIdentifier()
                         ->getName().str();
+      if (--SpecNum <= 0) {
+        break;
+      }
     }
     strMangled += std::string("__pp_spec");
     StringRef Mangled(strMangled);
@@ -7804,6 +7816,7 @@ void Parser::ParseParameterDeclarationClause(
                               : DeclaratorCtx == DeclaratorContext::LambdaExpr
                                   ? DeclaratorContext::LambdaExprParameter
                                   : DeclaratorContext::Prototype);
+    ++NumberOfPPSpecilizations;
     ParseDeclarator(ParmDeclarator);
 
     // Parse GNU attributes, if present.
