@@ -258,6 +258,34 @@ class Parser : public CodeCompletionHandler {
   /// MultiMethod<...here...>();
   bool IsInPPMM = false;
 
+  /// PP-EXT
+  std::string PPExtConstructGenName(
+    StringRef BaseName,
+    StringRef SpecName
+  );
+
+  std::string PPExtConstructGenName(
+    std::vector<StringRef> Names,
+    ParsedAttributes& PAttrs
+  );
+
+  Decl* PPExtCreateGeneralization(
+    StringRef Name,
+    RecordDecl* Head,
+    RecordDecl* Tail,
+    SourceLocation Loc,
+    ParsedAttributes& PAttrs
+  );
+
+  RecordDecl* PPExtGetTypeByName(StringRef Name);
+
+  IdentifierInfo* PPExtGetIdForExistingOrNewlyCreatedGen(
+    std::vector<StringRef> Names,
+    ParsedAttributes& PAttrs
+  );
+
+  std::string PPExtConstructTagName(StringRef GenName);
+
   /// RAII class that manages the template parameter depth.
   class TemplateParameterDepthRAII {
     unsigned &Depth;
