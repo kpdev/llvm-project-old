@@ -280,7 +280,7 @@ class Parser : public CodeCompletionHandler {
   RecordDecl* PPExtGetTypeByName(StringRef Name);
 
   IdentifierInfo* PPExtGetIdForExistingOrNewlyCreatedGen(
-    std::vector<StringRef> Names,
+    StringRef BaseName,
     ParsedAttributes& PAttrs
   );
 
