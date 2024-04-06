@@ -1575,6 +1575,7 @@ private:
   void AddPPSpecialization(
     llvm::Function* F,
     const std::vector<FunctionDecl::PPMMParam>& Gens);
+  llvm::Function* PPExtCreateMMRecorder(llvm::Function* BaseF);
   llvm::Function* ExtractDefaultPPMMImplementation(llvm::Function* F,
                                                    const clang::FunctionDecl* FD);
   llvm::BasicBlock*
