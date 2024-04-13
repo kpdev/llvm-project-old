@@ -2219,9 +2219,11 @@ private:
 //===--------------------------------------------------------------------===//
   // Procedural-parametric extension
 
-  using FieldDescription = std::tuple<const char*, DeclSpec::TST, bool>;
-  using FieldList = SmallVector<FieldDescription, 8>;
-  using SpecsVec = SmallVector<std::tuple<std::string, IdentifierInfo*, FieldList>, 8>;
+  struct SpecsDescr {
+    std::string VariantName;
+    IdentifierInfo* FullNameIInfo;
+  };
+  using SpecsVec = SmallVector<SpecsDescr>;
   Optional<SpecsVec> TryParsePPExt(Decl *TagDecl,
                          SmallVector<Decl *, 32>& FieldDecls,
                          const ParsedAttributes& Attrs);
