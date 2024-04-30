@@ -261,7 +261,8 @@ class Parser : public CodeCompletionHandler {
   /// PP-EXT
   std::string PPExtConstructGenName(
     StringRef BaseName,
-    StringRef SpecName
+    StringRef SpecName,
+    bool AddPrefix = true
   );
 
   std::string PPExtConstructGenName(
@@ -269,13 +270,12 @@ class Parser : public CodeCompletionHandler {
     ParsedAttributes& PAttrs
   );
 
-  Decl* PPExtCreateGeneralization(
+  RecordDecl* PPExtCreateGeneralization(
     StringRef Name,
     RecordDecl* Head,
     RecordDecl* Tail,
     SourceLocation Loc,
-    ParsedAttributes& PAttrs
-  );
+    ParsedAttributes& PAttrs);
 
   RecordDecl* PPExtGetTypeByName(StringRef Name);
 

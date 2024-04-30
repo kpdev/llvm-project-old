@@ -1571,6 +1571,7 @@ private:
   void EmitMultiVersionFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
 
   // PP-Extension
+  clang::Type* PPExtGetTypeByName(StringRef TypeNameExtracted);
   void HandlePPExtensionMethods(llvm::Function* F, GlobalDecl GD);
   void AddPPSpecialization(
     llvm::Function* F,
