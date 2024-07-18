@@ -1704,6 +1704,23 @@ std::string Parser::PPExtConstructTagName(StringRef GenName)
           + GenName.substr(0, NextPos - 2).str();
 }
 
+DeclSpec::TST Parser::PPExtGetFieldTypeByTokKind(tok::TokenKind TK)
+{
+  auto Res = DeclSpec::TST::TST_struct;
+  switch (TK) {
+    case tok::kw_int:
+      Res = DeclSpec::TST::TST_int;
+      break;
+    case tok::kw_void:
+      Res = DeclSpec::TST::TST_void;
+      break;
+    default:
+      ;
+  }
+
+  return Res;
+}
+
 /// ParseClassSpecifier - Parse a C++ class-specifier [C++ class] or
 /// elaborated-type-specifier [C++ dcl.type.elab]; we can't tell which
 /// until we reach the start of a definition or see a token that
@@ -1938,8 +1955,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         TagName = Tok.getIdentifierInfo()->getName();
         ConsumeToken();
         ConsumeToken();
-        assert(Tok.is(tok::identifier) ||
-               Tok.is(tok::kw_int));
+        assert(Tok.isOneOf(tok::identifier,
+                           tok::kw_int,
+                           tok::kw_void));
       }
 #ifdef PPEXT_DUMP
       printf("!!! [%s] %s\n",
@@ -2008,7 +2026,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           false, false, &TestSkipBody);
         Actions.ActOnTagStartDefinition(getCurScope(), TestDecl);
 
-        const bool IsBaseType = VariantNameIdentifier->getName().equals("int");
+        const DeclSpec::TST FieldType = PPExtGetFieldTypeByTokKind(Tok.getKind());
         // TODO PP-EXT: VariantDecl should not be casted to RecordDecl
         auto VariantRecordDecl = cast<RecordDecl>(VariantDecl);
         auto BaseRecordDecl = cast<RecordDecl>(BaseDecl);
@@ -2016,7 +2034,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         FieldGenerator("__pp_head", DeclSpec::TST_struct, BaseRecordDecl, false,
                         TestAttrs, TestDecl, FieldDecls);
         FieldGenerator("__pp_tail",
-                       IsBaseType ? DeclSpec::TST_int : DeclSpec::TST_struct,
+                       FieldType,
                        VariantRecordDecl, false,
                        TestAttrs, TestDecl, FieldDecls);
         SmallVector<Decl *, 32> TestFieldDecls(cast<RecordDecl>(TestDecl)->fields());
