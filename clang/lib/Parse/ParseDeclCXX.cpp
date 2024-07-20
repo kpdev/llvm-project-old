@@ -1982,10 +1982,11 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         ParsedAttributes TestAttrs(AttrFactory);
         auto VariantName = Tok.getIdentifierInfo()->getName().str();
         auto VariantNameIdentifier = &PP.getIdentifierTable().get(VariantName);
+        const bool IsPtr = NextToken().is(tok::star);
         auto TestNameStr = std::string("__pp_struct_") + Name->getName().str()
                             + "__"
                             + (TagName.empty() ?
-                                VariantName :
+                                VariantName + (IsPtr ? "_pp_ptr" : "") :
                                 TagName.str());
         auto TestName = &PP.getIdentifierTable().get(TestNameStr);
 
@@ -2035,7 +2036,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                         TestAttrs, TestDecl, FieldDecls);
         FieldGenerator("__pp_tail",
                        FieldType,
-                       VariantRecordDecl, false,
+                       VariantRecordDecl, IsPtr,
                        TestAttrs, TestDecl, FieldDecls);
         SmallVector<Decl *, 32> TestFieldDecls(cast<RecordDecl>(TestDecl)->fields());
         Actions.ActOnFields(getCurScope(), CurLoc, TestDecl, TestFieldDecls,
@@ -2065,6 +2066,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         }
       }
       ConsumeToken();
+      if (Tok.is(tok::star)) {
+        ConsumeToken();
+      }
       assert(Tok.is(tok::semi));
       ConsumeToken();
       assert(Tok.is(tok::greater));
