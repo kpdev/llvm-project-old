@@ -1944,7 +1944,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         //              then check if identifier is typedef
         CurLoc = ConsumeToken();
       }
-      assert(Tok.is(tok::identifier));
+      assert(Tok.isOneOf(tok::identifier,
+                         tok::kw_int));
       StringRef TagName;
       if (NextToken().is(tok::colon)) {
         TagName = Tok.getIdentifierInfo()->getName();
