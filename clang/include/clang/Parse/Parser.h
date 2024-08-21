@@ -2303,6 +2303,8 @@ private:
                                        DeclSpec::TST ReturnTypeSpecifier,
                                        SmallVector<DeclaratorChunk::ParamInfo, 16>& ParamInfo);
 
+  bool PPExtNextTokIsLParen = false;
+
   //===--------------------------------------------------------------------===//
   // Objective-C Statements
 
