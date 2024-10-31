@@ -190,6 +190,7 @@ Retry:
     return StmtError();
 
   case tok::identifier: {
+    PPExtHandleGetSpecSize();
     if (Tok.getIdentifierInfo()
             ->getName().equals("create_spec") ||
         Tok.getIdentifierInfo()

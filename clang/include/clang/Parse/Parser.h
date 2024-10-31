@@ -289,6 +289,8 @@ class Parser : public CodeCompletionHandler {
 
   std::string PPExtConstructTagName(StringRef GenName);
 
+  void PPExtHandleGetSpecSize();
+
   static DeclSpec::TST PPExtGetFieldTypeByTokKind(tok::TokenKind TK);
 
   /// RAII class that manages the template parameter depth.
