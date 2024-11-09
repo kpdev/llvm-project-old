@@ -2083,6 +2083,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           AddFunc(V.VariantInitFuncName,
             PPFuncMode::Init,
             V.VariantTagVariableName, ppMNames);
+          AddFunc(V.VariantCreateSpecFuncName,
+            PPFuncMode::CreateSpec,
+            V.VariantTagVariableName, ppMNames);
         }
       }
       ConsumeToken();
