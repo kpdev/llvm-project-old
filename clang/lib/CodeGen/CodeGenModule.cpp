@@ -3219,8 +3219,23 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
     // Forward declarations are emitted lazily on first use.
     if (!FD->doesThisDeclarationHaveABody()) {
-      if (!FD->doesDeclarationForceExternallyVisibleDefinition())
+      if (!FD->doesDeclarationForceExternallyVisibleDefinition()) {
+        if (FD->getName().startswith("create_spec")) {
+          // PP-EXT: It is an empty-generated create_spec
+          // Compute the function info and LLVM type.
+          // TODO: Avoid it by moving declaration of create_spec
+          // to CodeGenModule instead of AST
+          const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+          llvm::Type *Ty = getTypes().GetFunctionType(FI);
+
+          // Here it implicitly will be added to
+          //  PPCreateSpecsToDefine
+          GetOrCreateLLVMFunction(FD->getName(), Ty, GD, /*ForVTable=*/false,
+                                  /*DontDefer=*/false);
+        }
         return;
+      }
+
 
       StringRef MangledName = getMangledName(GD);
 
