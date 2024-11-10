@@ -1578,6 +1578,7 @@ private:
   using MMParams = std::vector<FunctionDecl::PPMMParam>;
   void AddPPSpecialization(llvm::Function* F,
                            const MMParams& Gens);
+  void PPExtInitCreateSpecArray(StringRef GenName, llvm::Module& Parent);
   llvm::Function* PPExtCreateMMRecorder(llvm::Function* BaseF);
   llvm::Function* ExtractDefaultPPMMImplementation(llvm::Function* F,
                                                    const clang::FunctionDecl* FD);
