@@ -1294,9 +1294,20 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
                             getAsRecordDecl()) {
               auto TName = RD->getName();
               auto Tmp = VD->getNameAsString();
-              bool isVariant = TName.startswith("__pp_struct");
+              StringRef TagFieldName("__pp_specialization_type");
+              bool isGen = false;
+              for (auto FieldIter = RD->field_begin();
+                        FieldIter != RD->field_end(); ++FieldIter) {
+                  if (FieldIter->getName().equals(TagFieldName)) {
+                    isGen = true;
+                    break;
+                  }
+                }
 
-              if (isVariant) {
+              const bool isVariant = !isGen
+                          && TName.startswith("__pp_struct");
+
+              if (isGen || isVariant) {
                 // Initialize tag
                 CXXScopeSpec SS;
                 UnqualifiedId FieldName;
@@ -1314,15 +1325,17 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
                   NextToken()
                 );
 
-                auto TagField = Actions.ActOnMemberAccessExpr(getCurScope(),
-                  ERes.get(), SourceLocation(),
-                  clang::tok::period,
-                  SS,
-                  SourceLocation(),
-                  FieldName,
-                  nullptr);
+                auto TagField = isVariant ?
+                    Actions.ActOnMemberAccessExpr(getCurScope(),
+                      ERes.get(), SourceLocation(),
+                      clang::tok::period,
+                      SS,
+                      SourceLocation(),
+                      FieldName,
+                      nullptr)
+                  : ERes;
 
-                IdentifierInfo* Id = &PP.getIdentifierTable().get("__pp_specialization_type");
+                IdentifierInfo* Id = &PP.getIdentifierTable().get(TagFieldName);
                 FieldName.setIdentifier(Id, SourceLocation());
                 TagField = Actions.ActOnMemberAccessExpr(getCurScope(),
                   TagField.get(), SourceLocation(),
@@ -1332,8 +1345,9 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
                   FieldName,
                   nullptr);
 
-                DeclRefExpr* RHSRes;
-                { // RHS
+                Expr* RHSRes;
+                // Prepare RHS
+                if (isVariant) {
                   std::string TagName = PPExtConstructTagName(TName);
                   IdentifierInfo* II = &PP.getIdentifierTable().get(TagName);
                   UnqualifiedId VarName;
@@ -1344,7 +1358,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
                     Sema::LookupOrdinaryName);
                   getActions().LookupName(R, getCurScope(), true);
                   auto* D = cast<ValueDecl>(R.getFoundDecl());
-                  RHSRes = DeclRefExpr::Create(getActions().Context,
+                  auto RHSResDeclRef = DeclRefExpr::Create(getActions().Context,
                     NestedNameSpecifierLoc(), SourceLocation(),
                     D,
                     false,
@@ -1352,8 +1366,12 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
                     D->getType(),
                     clang::VK_LValue,
                     D);
-                  getActions().MarkDeclRefReferenced(RHSRes);
-                } // RHS
+                  getActions().MarkDeclRefReferenced(RHSResDeclRef);
+                  RHSRes = RHSResDeclRef;
+                }
+                else {
+                  RHSRes = Actions.ActOnIntegerConstant(Tok.getLocation(), 0).get();
+                }
 
                 ExprResult AssignmentOpExpr =
                   Actions.ActOnBinOp(
