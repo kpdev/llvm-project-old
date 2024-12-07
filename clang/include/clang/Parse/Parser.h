@@ -18,7 +18,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
@@ -287,6 +286,22 @@ class Parser : public CodeCompletionHandler {
     ParsedAttributes& PAttrs,
     bool NeedToAddLParen = true
   );
+
+  enum class PPStructType {
+    Default,
+    Generalization,
+    Specialization
+  };
+
+  PPStructType PPExtGetStructType(const RecordDecl* RD) const;
+
+  struct PPStructInitDesc {
+    NamedDecl* VD;
+    const RecordDecl* RD;
+    const PPStructType Type;
+  };
+
+  std::vector<PPStructInitDesc> PPExtGetRDListToInit(const RecordDecl* RD) const;
 
   std::string PPExtConstructTagName(StringRef GenName);
 
