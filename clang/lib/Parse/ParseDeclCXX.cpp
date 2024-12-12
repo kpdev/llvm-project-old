@@ -1626,7 +1626,10 @@ IdentifierInfo* Parser::PPExtGetIdForExistingOrNewlyCreatedGen(
     Names.push_back({Tok.getIdentifierInfo()->getName(), false});
   }
 
-  ConsumeToken();
+  if (Names.size() != 1 ||
+    !NextToken().is(tok::r_paren)) {
+    ConsumeToken();
+  }
 
   assert(Tok.isOneOf(
               tok::r_paren,
@@ -1666,7 +1669,9 @@ IdentifierInfo* Parser::PPExtGetIdForExistingOrNewlyCreatedGen(
   }
 
   auto MangledName =
-    PPExtConstructGenName(Names, PAttrs);
+    Names.size() == 1 ?
+      Names[0].first.str() :
+      PPExtConstructGenName(Names, PAttrs);
 
   auto& Tbl = PP.getIdentifierTable();
   assert(Tbl.find(MangledName) != Tbl.end());
