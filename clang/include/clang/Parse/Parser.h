@@ -284,7 +284,8 @@ class Parser : public CodeCompletionHandler {
   IdentifierInfo* PPExtGetIdForExistingOrNewlyCreatedGen(
     StringRef BaseName,
     ParsedAttributes& PAttrs,
-    bool NeedToAddLParen = true
+    bool NeedToAddLParen = true,
+    bool SaveLastIdent = false
   );
 
   enum class PPStructType {
