@@ -1335,7 +1335,12 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                   || Tok.is(tok::l_paren));
           if (!Tok.is(tok::l_paren)) {
             ConsumeToken();
-            assert(Tok.is(tok::identifier));
+            assert(Tok.isOneOf(
+              tok::identifier,
+              tok::kw_int,
+              tok::kw_double,
+              tok::kw_char
+            ));
             Tok.setKind(tok::l_paren);
           }
         }
@@ -2367,7 +2372,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
               tok::semi,
               tok::equal,
               tok::r_paren,
-              tok::comma
+              tok::comma,
+              tok::minus,
+              tok::plus
             ));
             Tok.setKind(tok::period);
           }
@@ -2375,6 +2382,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           assert(Tok.isOneOf(tok::period, tok::arrow));
 
           if (NTok.isOneOf(
+                tok::plus,
+                tok::minus,
                 tok::semi,
                 tok::equal,
                 tok::r_paren,
