@@ -1573,8 +1573,11 @@ private:
   // PP-Extension
   clang::Type* PPExtGetTypeByName(StringRef TypeNameExtracted);
   void HandlePPExtensionMethods(llvm::Function* F, GlobalDecl GD);
-  void PPExtGenerateInitForGlobVarIfNeeded(llvm::GlobalVariable* GV);
-  void PPExtInitGenOrSpec(llvm::BasicBlock* BB, StringRef Name, llvm::Value* ParentObject);
+  void PPExtInitGlobVar(llvm::GlobalVariable* GV);
+  void PPExtInitStackAllocatedVars(llvm::Function* F);
+
+  template <typename TInsertPoint>
+  void PPExtInitGenOrSpec(TInsertPoint* IPoint, StringRef Name, llvm::Value* ParentObject);
   void PPExtRecordCreateSpec(llvm::Function* FnCreateSpec, RecordDecl* RDSpec, llvm::Module& Parent);
   using MMParams = std::vector<FunctionDecl::PPMMParam>;
   void AddPPSpecialization(llvm::Function* F,
@@ -1586,9 +1589,10 @@ private:
   llvm::Value* PPExtGetIndexForMM(llvm::Function* F,
                                   const MMParams& Gens);
 
+  template <typename TInsertPoint>
   void PPExtInitTypeTagsRecursively(StringRef NameOfVariable,
                                     llvm::Value* PtrToObjForGEP,
-                                    llvm::BasicBlock* BB);
+                                    TInsertPoint* IPoint);
 
   llvm::BasicBlock*
   InitPPHandlersArray(llvm::BasicBlock* BB,
