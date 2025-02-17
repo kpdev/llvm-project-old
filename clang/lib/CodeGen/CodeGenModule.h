@@ -1585,6 +1585,11 @@ private:
                                                    const clang::FunctionDecl* FD);
   llvm::Value* PPExtGetIndexForMM(llvm::Function* F,
                                   const MMParams& Gens);
+
+  void PPExtInitTypeTagsRecursively(StringRef NameOfVariable,
+                                    llvm::Value* PtrToObjForGEP,
+                                    llvm::BasicBlock* BB);
+
   llvm::BasicBlock*
   InitPPHandlersArray(llvm::BasicBlock* BB,
                       llvm::Value* AllocatedBytes,
