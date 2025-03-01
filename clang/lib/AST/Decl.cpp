@@ -3501,7 +3501,10 @@ auto FunctionDecl::getRecordDeclsGenArgsForPPMM() const -> MMParams
       if (RD) {
         int Idx = 0;
 
-        if (RD->getName().startswith("__pp_struct_")) {
+        bool isGenAsSpec = (*p)->PPExtIsGenAsSpecIdType();
+        bool startsWithPPStruct = RD->getName().startswith("__pp_struct_");
+        assert(!(isGenAsSpec && startsWithPPStruct));
+        if (isGenAsSpec || startsWithPPStruct) {
           IsSpec = true;
         } else {
           // If we meet a generalization parameter
@@ -3511,11 +3514,16 @@ auto FunctionDecl::getRecordDeclsGenArgsForPPMM() const -> MMParams
 
         RecordDecl* BaseRD = nullptr;
         if (IsSpec) {
-          auto F = *RD->field_begin();
-          assert(F->getName().equals("__pp_head"));
-          assert(F->getType().getTypePtr() &&
-                F->getType().getTypePtr()->getAsRecordDecl());
-          BaseRD = F->getType().getTypePtr()->getAsRecordDecl();
+          if (isGenAsSpec) {
+            BaseRD = RD;
+          }
+          else {
+            auto F = *RD->field_begin();
+            assert(F->getName().equals("__pp_head"));
+            assert(F->getType().getTypePtr() &&
+                  F->getType().getTypePtr()->getAsRecordDecl());
+            BaseRD = F->getType().getTypePtr()->getAsRecordDecl();
+          }
         }
 
         auto RecordToIterate = (IsSpec ? BaseRD : RD);

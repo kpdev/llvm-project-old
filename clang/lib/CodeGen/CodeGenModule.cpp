@@ -5380,6 +5380,9 @@ void CodeGenModule::AddPPSpecialization(
   auto FName = F->getName();
   std::string RDName;
   for (auto FuncParam : Gens.ParamsList) {
+    if (FuncParam.PVD->PPExtIsGenAsSpecIdType()) {
+      RDName += "__0";
+    }
     RDName += FuncParam.RD->getNameAsString();
   }
 
@@ -6200,6 +6203,7 @@ void CodeGenModule::HandlePPExtensionMethods(
 
   // Construct and invoke malloc
   auto initArrName = std::string("__pp_mminitarr") + FName.str();
+  StringRef initArrNameRef(initArrName); // For debug purpose
   {
     StringRef MangledName = "malloc";
     llvm::Function *F = getModule().getFunction(MangledName);
@@ -6581,6 +6585,9 @@ CodeGenModule::PPExtGetIndexForMM(
 
   auto GetTagForType =
     [&](const FunctionDecl::PPMMParam& g) -> llvm::Value* {
+    if (g.PVD->PPExtIsGenAsSpecIdType()) {
+      return llvm::Constant::getNullValue(MyIntTy);
+    }
     auto genName = std::string("__pp_tag_")
       + g.RD->getNameAsString();
     StringRef StrRefTagsName(genName);
@@ -6699,6 +6706,7 @@ CodeGenModule::ExtractDefaultPPMMImplementation(
   auto FName = F->getName();
   auto FnTy = F->getFunctionType();
   auto initArrName = std::string("__pp_mminitarr") + FName.str();
+  StringRef initArrNameRef(initArrName); // For debug purpose
   auto* InitArr = getModule().getGlobalVariable(initArrName);
   auto* FnPtrType = llvm::PointerType::get(FnTy, 0);
   if (!InitArr) {

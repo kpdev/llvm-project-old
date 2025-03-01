@@ -1830,6 +1830,11 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ParmVar; }
 
+  /// Setter and checker for ident type
+  /// used in multimethods (pp-extension)
+  bool PPExtIsGenAsSpecIdType() const { return identType == PPExtIdentType::GenAsSpecForMM; }
+  void PPExtSetIdentType(PPExtIdentType t) { identType = t; }
+
 private:
   enum { ParameterIndexSentinel = (1 << NumParameterIndexBits) - 1 };
 
@@ -1849,6 +1854,8 @@ private:
 
   void setParameterIndexLarge(unsigned parameterIndex);
   unsigned getParameterIndexLarge() const;
+
+  PPExtIdentType identType = PPExtIdentType::Default;
 };
 
 enum class MultiVersionKind {

@@ -1325,7 +1325,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         }
         else {
           ParsedAttributes attrs(AttrFactory);
-          auto* Id = PPExtGetIdForExistingOrNewlyCreatedGen("", attrs);
+          auto* Id = PPExtGetIdForExistingOrNewlyCreatedGen("", attrs).second;
           auto S = Name.Identifier->getName().str()
                     + Id->getName().str();
           StringRef Mangled(S);
@@ -2016,8 +2016,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
     return false;
   };
 
-  bool IsInVarianField = false;
-
   auto* E = LHS.get();
   bool IsFunction = false;
   if (E && isa<DeclRefExpr>(E)) {
@@ -2047,7 +2045,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
     case tok::at:
       if (!LHS.isInvalid() && IsGeneralization(LHS.get(), IsNextVariantField)) {
         IsNextVariantField = false;
-        IsInVarianField = true;
         Tok.startToken();
         Tok.clearFlag(Token::NeedsCleaning);
         Tok.setIdentifierInfo(nullptr);

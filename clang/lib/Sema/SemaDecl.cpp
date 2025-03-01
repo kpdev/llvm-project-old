@@ -14380,6 +14380,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
       CheckParameter(Context.getTranslationUnitDecl(), D.getBeginLoc(),
                      D.getIdentifierLoc(), II, parmDeclType, TInfo, SC);
 
+  New->PPExtSetIdentType(D.getDeclSpec().PPExtGetIdentType());
+
   if (D.isInvalidType())
     New->setInvalidDecl();
 
